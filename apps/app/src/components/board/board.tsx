@@ -15,7 +15,7 @@
 
 import { STATUS_DOT_VAR } from "@maestro/ui";
 import { X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
 import { postIntent } from "@/intents/client";
 import { maestroStore, selectPlaneItems } from "@/store";
@@ -29,7 +29,7 @@ import { BoardPlane, FeedPlane, ListPlane, PlaneToggle } from "./planes";
  *  the memo win (SSE events between ticks still skip idle cards). */
 const AGE_TICK_MS = 30_000;
 
-export function Board() {
+export function Board({ chatSlot }: { chatSlot?: ReactNode }) {
   const server = useStore(maestroStore, (s) => s.server);
   const view = useStore(maestroStore, (s) => s.view);
   const setView = useStore(maestroStore, (s) => s.setView);
@@ -98,6 +98,35 @@ export function Board() {
 
   const empty = items.length === 0;
 
+  // The inspector body (close verb + the crash-isolated Inspector) — factored once so it reads identically
+  // whether it sits in the mission-home context column or the bare-Board 45% panel. Keyed by id ALONE so an
+  // A→B switch remounts fresh, but a live node.updated on the SAME item does NOT force-remount the healthy
+  // subtree (that would drop a gate verb's in-flight 5s grace window, BRO-1809); resetKeys retries the
+  // boundary only when it is ERRORED (crash recovery preserved).
+  const inspectorBody =
+    selectedItem !== null ? (
+      <>
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            data-testid="inspector-close"
+            aria-label="Close inspector"
+            onClick={() => setSelectedId(null)}
+            className="flex size-7 items-center justify-center rounded-row text-muted-foreground transition-colors motion-reduce:transition-none hover:bg-[var(--bv-frost-8)] hover:text-foreground"
+          >
+            <X size={16} strokeWidth={2} />
+          </button>
+        </div>
+        <ErrorBoundary
+          key={selectedItem.id}
+          resetKeys={[selectedItem.updatedAt]}
+          label="The inspector"
+        >
+          <Inspector item={selectedItem} onIntent={postIntent} />
+        </ErrorBoundary>
+      </>
+    ) : null;
+
   return (
     <div className="flex h-full min-h-0" data-testid="board-layout">
       <div className="mcc-plane flex-1" data-testid="board">
@@ -163,36 +192,35 @@ export function Board() {
         </div>
       </div>
 
-      {/* Selection drives the inspector — a matte panel (never glass, CLAUDE.md §Glass), ~45%
-          viewport / 380px min, full-height with its own scroll so the shell still never scrolls. */}
-      {selectedItem ? (
+      {/* The right column is the home's CONTEXT surface (design-fidelity slice 1, the prototype's mission
+          mode `.mcc-chatside`). By default it docks the orchestrator chat + gate queue (chatSlot) — "chat is
+          the home" (CLAUDE.md §What Maestro is). Selecting a work card swaps in that run's inspector (rung 3,
+          "for verifying not operating"); the chat stays MOUNTED underneath (hidden, not unmounted) so a card
+          click never discards the conversation or an in-flight streaming turn. The inspector is a matte panel
+          (never glass, CLAUDE.md §Glass) with its own scroll, so the shell still never scrolls. Below `lg`
+          the dock drops to keep the plane usable on narrow desktops (the mobile shell owns small screens). */}
+      {chatSlot ? (
+        <div
+          data-testid="home-context"
+          className="hidden w-[420px] min-w-[360px] shrink-0 flex-col border-border border-l lg:flex xl:w-[480px]"
+        >
+          {selectedItem ? (
+            <div
+              data-testid="inspector-panel"
+              className="flex h-full min-h-0 flex-col overflow-y-auto bg-card p-4"
+            >
+              {inspectorBody}
+            </div>
+          ) : null}
+          <div className={selectedItem ? "hidden" : "flex h-full min-h-0 flex-col"}>{chatSlot}</div>
+        </div>
+      ) : selectedItem ? (
+        // Bare Board (no chat dock) keeps the original inspector-on-select at ~45% viewport / 380px min.
         <div
           data-testid="inspector-panel"
           className="flex h-full w-[45%] min-w-[380px] shrink-0 flex-col overflow-y-auto border-border border-l bg-card p-4"
         >
-          <div className="mb-2 flex justify-end">
-            <button
-              type="button"
-              data-testid="inspector-close"
-              aria-label="Close inspector"
-              onClick={() => setSelectedId(null)}
-              className="flex size-7 items-center justify-center rounded-row text-muted-foreground transition-colors motion-reduce:transition-none hover:bg-[var(--bv-frost-8)] hover:text-foreground"
-            >
-              <X size={16} strokeWidth={2} />
-            </button>
-          </div>
-          {/* A crashed inspector must not take down the plane (porting-notes §Production hardening).
-              Keyed by id ALONE so an A→B switch remounts fresh, but a live node.updated on the SAME item
-              does NOT force-remount the healthy subtree — that would drop a gate verb's in-flight 5s grace
-              window (BRO-1809, early-commit-on-remount). Crash recovery is preserved via resetKeys: an
-              updatedAt change retries the boundary only when it is ERRORED. */}
-          <ErrorBoundary
-            key={selectedItem.id}
-            resetKeys={[selectedItem.updatedAt]}
-            label="The inspector"
-          >
-            <Inspector item={selectedItem} onIntent={postIntent} />
-          </ErrorBoundary>
+          {inspectorBody}
         </div>
       ) : null}
     </div>

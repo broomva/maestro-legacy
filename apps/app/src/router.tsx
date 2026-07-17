@@ -1,13 +1,13 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { AccountPage } from "./components/account/account-page";
-import { Board } from "./components/board/board";
 import { PaneErrorFallback } from "./components/error-boundary";
 import { HistoryPage } from "./components/history/history-page";
 import { KnowledgePage } from "./components/knowledge/knowledge-page";
 import { SettingsPage } from "./components/settings/settings-page";
 import { ShellLayout } from "./routes/app";
 import { FileRoute } from "./routes/file";
+import { MissionHome } from "./routes/home";
 import { KitchenSink } from "./routes/kitchen-sink";
 import { SessionView } from "./routes/session";
 
@@ -36,7 +36,7 @@ const view = <const P extends string>(path: P, component: () => ReactNode, label
     errorComponent: () => <PaneErrorFallback label={label} />,
   });
 
-const boardRoute = view("/", Board, "The board");
+const boardRoute = view("/", MissionHome, "The board");
 // The chat surface (BRO-1826 M4) — a session rendered as a thread (+ side-panel mirror). A path param
 // carries the session/node id; `view` takes only static paths, so this route is spelled out. Same
 // pane-scoped errorComponent as the others (a crashed chat falls back within the shell).

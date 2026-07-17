@@ -29,7 +29,7 @@ import { maestroStore, selectGateQueue } from "@/store";
  *  sessionId (P20 slice-B MAJOR): a `$sessionId` change fully remounts this, giving the new session a
  *  fresh `useBvChat` while the prior instance's unmount cleanup aborts its in-flight turn — session A's
  *  stream can never bleed into session B's transcript. */
-function SessionChat({ sessionId }: { sessionId: string }) {
+function SessionChat({ sessionId, dock = false }: { sessionId: string; dock?: boolean }) {
   // Bind the transport once per mount. Fixture mode is a demo/test seam (query-triggered), inert
   // otherwise — production streams over the real F10 endpoint.
   const transport = useMemo<ChatTransport>(() => {
@@ -52,7 +52,7 @@ function SessionChat({ sessionId }: { sessionId: string }) {
   const gateItems = useMemo(() => (server ? selectGateQueue(server) : []), [server]);
 
   return (
-    <div className="flex h-full min-h-0" data-testid="session-view">
+    <div className="flex h-full min-h-0" data-testid={dock ? "orchestrator-dock" : "session-view"}>
       {/* The thread — the conversation column. The feed grows and scrolls; the composer sits in a
           bottom footer, both centered to the canon 768px measure (the DS class centers the feed; the
           footer matches). The gate queue (rung 2) stacks above the composer at the orchestrator's foot —
@@ -72,19 +72,35 @@ function SessionChat({ sessionId }: { sessionId: string }) {
 
       {/* The side panel — the same session as a read-only mirror (rung 3, for verifying not operating).
           Hidden on narrow viewports; the layout rule reserves the right panel for wide screens. This is
-          the "same run in a side panel" the M4 verify names — one hook, a second projection, no composer. */}
-      <aside
-        className="hidden w-[380px] shrink-0 flex-col border-border border-l xl:flex"
-        aria-label="Session panel"
-        data-testid="session-panel"
-      >
-        <header className="flex h-[44px] shrink-0 items-center border-border border-b px-4">
-          <span className="font-medium text-sm">This session</span>
-        </header>
-        <ChatFeed messages={messages} status={status} label="This session" />
-      </aside>
+          the "same run in a side panel" the M4 verify names — one hook, a second projection, no composer.
+          Omitted in the DOCK variant: the mission-home right column is already a narrow docked chat, so the
+          full-route mirror would not fit and is not part of the home surface (slice 1). */}
+      {dock ? null : (
+        <aside
+          className="hidden w-[380px] shrink-0 flex-col border-border border-l xl:flex"
+          aria-label="Session panel"
+          data-testid="session-panel"
+        >
+          <header className="flex h-[44px] shrink-0 items-center border-border border-b px-4">
+            <span className="font-medium text-sm">This session</span>
+          </header>
+          <ChatFeed messages={messages} status={status} label="This session" />
+        </aside>
+      )}
     </div>
   );
+}
+
+/**
+ * The orchestrator's chat, docked on the mission home's right column (design-fidelity slice 1). This is the
+ * "chat is the home" fix (CLAUDE.md §What Maestro is; the prototype's mission mode, ConceptMaestroLoop
+ * `MccMaestroLoopV2` — the work plane with the orchestrator conversation co-present, `.mcc-chatside`). It
+ * renders the gate queue (rung 2, "the look") above the composer, so the primary surface carries the
+ * approve/send-back verbs — not a separate route. `dock` drops the read-only mirror; the session id is the
+ * constant "orchestrator", so no keying is needed (a worker session never mounts here).
+ */
+export function OrchestratorDock() {
+  return <SessionChat sessionId="orchestrator" dock />;
 }
 
 export function SessionView() {
