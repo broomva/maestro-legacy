@@ -54,6 +54,8 @@ export function GateQueue({ items, onIntent }: GateQueueProps) {
   const timers = useRef<
     Record<string, { timer: ReturnType<typeof setTimeout>; flush: () => void }>
   >({});
+  // Guards the once-only auto-expand of the primary gate (below).
+  const autoOpened = useRef(false);
 
   const clearTimer = useCallback((id: string) => {
     const t = timers.current[id];
@@ -118,6 +120,18 @@ export function GateQueue({ items, onIntent }: GateQueueProps) {
     },
     [clearTimer],
   );
+
+  // Auto-expand the PRIMARY (first) gate so the look + verbs show without a click — the prototype's
+  // MccGateQueue opens index 0 by default (ConceptMaestroLoop.jsx: `useState(mini ? -1 : 0)`). It fires
+  // once the queue first has items; after that the user's open/close wins (the ref guards a re-open of a
+  // card the human deliberately collapsed). Approve stays reversible for its grace window, so a pre-opened
+  // verb is no less safe than a clicked-open one — the disclosure is the only thing that changes.
+  useEffect(() => {
+    if (autoOpened.current || items.length === 0) return;
+    autoOpened.current = true;
+    const firstId = items[0]?.id;
+    if (firstId) setOpenId((cur) => cur ?? firstId);
+  }, [items]);
 
   // The clock drives two receipts: the grace countdown (a 500ms tick while a verdict is inside its
   // window) and each card's relative age (a calm 30s tick while any card is docked). Gating the age

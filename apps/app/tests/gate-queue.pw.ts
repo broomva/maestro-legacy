@@ -26,9 +26,8 @@ test("a review card expands to the look + verbs; the empty queue is all-clear; n
     /bv-blue-accent/,
   );
 
-  // Collapsed: no verbs until you LOOK. Click the row → the look + Approve/Send back appear.
-  await expect(reviewCard.getByRole("button", { name: "Approve", exact: true })).toHaveCount(0);
-  await reviewCard.locator(".mcc-gateq-row").click();
+  // The PRIMARY gate is auto-expanded (the prototype opens index 0) — the look + verbs show without a
+  // click, so the human can act at a glance. Approve stays reversible for its grace window.
   await expect(reviewCard.getByRole("button", { name: "Approve", exact: true })).toBeVisible();
   await expect(reviewCard.getByRole("button", { name: "Send back", exact: true })).toBeVisible();
   // The look sits on the card so the approve verb is never blind (the run receipt shows).
@@ -43,7 +42,7 @@ test("Approve is reversible for a beat: Undo cancels the send; letting it lapse 
 }) => {
   const queue = page.getByTestId("gate-queue");
   const reviewCard = queue.locator('[data-state="review"]');
-  await reviewCard.locator(".mcc-gateq-row").click();
+  // The primary card is auto-expanded — Approve is available without a click.
 
   // Approve → the grace/undo chip appears, and NOTHING is dispatched yet (the intent waits out the window).
   await reviewCard.getByRole("button", { name: "Approve", exact: true }).click();
@@ -68,7 +67,7 @@ test("unmounting mid-grace COMMITS the chosen verdict (not Undo) — a session s
 }) => {
   const queue = page.getByTestId("gate-queue");
   const reviewCard = queue.locator('[data-state="review"]');
-  await reviewCard.locator(".mcc-gateq-row").click();
+  // The primary card is auto-expanded — Approve is available without a click.
 
   // Approve → grace window open, nothing dispatched yet.
   await reviewCard.getByRole("button", { name: "Approve", exact: true }).click();
@@ -90,8 +89,8 @@ test("closing a card mid-send-back discards the draft — reopening shows the de
   const queue = page.getByTestId("gate-queue");
   const reviewCard = queue.locator('[data-state="review"]');
 
-  // Open → Send back → type a draft, then close the card WITHOUT sending or cancelling.
-  await reviewCard.locator(".mcc-gateq-row").click();
+  // The primary card is auto-expanded → Send back → type a draft, then close the card WITHOUT sending or
+  // cancelling.
   await reviewCard.getByRole("button", { name: "Send back", exact: true }).click();
   await reviewCard.locator(".mcc-gateq-note-input").fill("half-typed feedback");
   await reviewCard.locator(".mcc-gateq-row").click();
@@ -110,7 +109,7 @@ test("Send back collects a note (a revise carries feedback); a blocked card redi
 
   // Send back reveals a note (revise{gateId, feedback}); an empty note cannot send.
   const reviewCard = queue.locator('[data-state="review"]');
-  await reviewCard.locator(".mcc-gateq-row").click();
+  // The primary card is auto-expanded — Send back is available without a click.
   await reviewCard.getByRole("button", { name: "Send back", exact: true }).click();
   const note = reviewCard.locator(".mcc-gateq-note-input");
   await expect(note).toBeVisible();
