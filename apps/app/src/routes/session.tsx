@@ -7,7 +7,7 @@
 // selects the recorded `FixtureChatTransport` (the demo/test seam, inert in production — mirrors the
 // router's `?crash` probe). The shell layout owns the SSE stream + chrome; this is just its child view.
 
-import { Composer } from "@maestro/ui";
+import { PromptPlate } from "@maestro/ui";
 import { useParams } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useStore } from "zustand";
@@ -61,8 +61,12 @@ function SessionChat({ sessionId, dock = false }: { sessionId: string; dock?: bo
         <ChatFeed messages={messages} status={status} label="Conversation" />
         <div className="mx-auto flex w-full max-w-[768px] shrink-0 flex-col gap-2.5 px-4 pt-2 pb-4">
           {isOrchestrator ? <GateQueue items={gateItems} onIntent={postIntent} /> : null}
-          <Composer
-            placeholder="Message Maestro"
+          <PromptPlate
+            placeholder={
+              isOrchestrator
+                ? "Message Maestro · anything beyond approve and send back"
+                : "Message Maestro"
+            }
             busy={busy}
             onSend={(text) => sendMessage({ text })}
             onStop={stop}

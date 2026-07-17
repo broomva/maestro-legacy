@@ -14,6 +14,12 @@ export { IconButton, type IconButtonProps } from "./icon-button";
 export { Input, type InputProps } from "./input";
 export { cn } from "./lib/cn";
 export {
+  PROMPT_MODELS,
+  type PromptModel,
+  PromptPlate,
+  type PromptPlateProps,
+} from "./prompt-plate";
+export {
   STATUS_DOT_VAR,
   StatusBadge,
   type StatusBadgeProps,
